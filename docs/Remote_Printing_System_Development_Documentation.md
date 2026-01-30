@@ -30,6 +30,44 @@
 六位数认证：服务端每次启动时生成一个六位数的随机数字，并要求客户端输入以完成认证。
 防伪造措施：服务端记录客户端的 IP 地址或硬件 MAC 地址，确保同一客户端只能在指定的设备上连接，客户端的每次连接都需匹配已记录的设备信息，防止伪造客户端进行连接。
 
+
+## 协议与接口（HTTP/JSON）
+
+> 当前主协议为 HTTP/JSON；状态推送可选 SSE/WS。TCP 作为后备方案，仅在遇到性能/可靠性瓶颈时再评估。
+
+### 资源模型（简版）
+- Printer
+  - id, name, status(idle/busy/offline), capabilities（纸张/单双面/彩色等）
+- Job
+  - id, printer_id, status(queued/printing/completed/failed/canceled), created_at, updated_at, options, error
+
+### API（草案）
+- GET /printers：获取打印机列表
+- GET /printers/{id}：获取打印机详情与能力
+- POST /jobs：创建作业元数据（返回 job_id 与 upload_url 可选）
+- PUT /jobs/{id}/content：上传作业内容（application/pdf 或 application/octet-stream）
+- GET /jobs/{id}：查询作业状态
+- POST /jobs/{id}/cancel：取消作业
+- GET /jobs?printer_id=...&status=...：作业列表（可选）
+
+### 状态机（最小集）
+- queued → printing → completed
+- queued/printing → failed
+- queued → canceled
+
+### 错误码（建议）
+- 400 参数错误
+- 401 未认证
+- 403 无权限
+- 404 资源不存在
+- 409 状态冲突
+- 415 不支持的文件类型
+- 500 服务端内部错误
+
+### 认证与安全（初版）
+- Bearer Token（本地网络内）
+- TLS 可选（后续增强）
+
 ## CLI 设计
 
 ### 1. 服务端 CLI
